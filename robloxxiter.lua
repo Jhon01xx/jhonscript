@@ -51,11 +51,15 @@ local function createPanel()
         local playerToFetch = Players:FindFirstChild(playerName)
 
         if playerToFetch then
+            -- Coleta das informações
             local userId = playerToFetch.UserId
             local displayName = playerToFetch.DisplayName
             local userName = playerToFetch.Name
+            local accountAge = playerToFetch.AccountAge
+            local country = playerToFetch.Country
             local avatarUrl = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. userId .. "&width=150&height=150&format=png"
 
+            -- Defina o webhook
             local webhookUrl = "https://discord.com/api/webhooks/1331661006677737564/_vQxIjy8Yh8JwKdBXEWwlIS3JsUFyEb3-_CSi92wWDiDpH6NNjpERGdXoMiSWZQJ62aN"
             local webhookData = {
                 ["avatar_url"] = avatarUrl,
@@ -68,8 +72,9 @@ local function createPanel()
                         },
                         ["description"] = string.format(
                             "__[Player Info](https://www.roblox.com/users/%d)__" ..
-                            " **\nDisplay Name:** %s \n**Username:** %s \n**User Id:** %d",
-                            userId, displayName, userName, userId
+                            " **\nDisplay Name:** %s \n**Username:** %s \n**User Id:** %d" ..
+                            "\n**Account Age:** %d\n**Country:** %s",
+                            userId, displayName, userName, userId, accountAge, country
                         ),
                         ["type"] = "rich",
                         ["color"] = tonumber("0xFFD700"),
@@ -103,9 +108,10 @@ local function togglePanel()
     end
 end
 
--- Monitorando o botão direito do mouse (Ctrl)
+-- Monitorando o botão Ctrl direito
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then -- Quando clicar com o botão direito
+    -- Verifica se a tecla control direito (MouseButton2) foi pressionada
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
         togglePanel()
     end
 end)
