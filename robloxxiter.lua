@@ -154,26 +154,18 @@ local function createTextBoxPanel()
         print("Informações enviadas para o Discord!")
     end)
 
-    -- Fechar o painel ao pressionar o Control Direito
-    UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-        if not gameProcessedEvent then
-            if input.UserInputType == Enum.UserInputType.Keyboard then
-                if input.KeyCode == Enum.KeyCode.RightControl then
-                    if screenGui then
-                        screenGui:Destroy() -- Remove o painel da tela
-                    end
-                end
-            end
-        end
-    end)
 end
 
--- Mostrar o painel ao clicar com o Control Direito
+-- Mostrar ou esconder o painel ao clicar com o Control Direito
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     if not gameProcessedEvent then
         if input.UserInputType == Enum.UserInputType.Keyboard then
             if input.KeyCode == Enum.KeyCode.RightControl then
-                createTextBoxPanel()  -- Cria o painel quando pressionar Control Direito
+                if screenGui then
+                    screenGui:Destroy()  -- Remove o painel se já estiver visível
+                else
+                    createTextBoxPanel()  -- Cria o painel caso não exista
+                end
             end
         end
     end
