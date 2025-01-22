@@ -1,7 +1,7 @@
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
 local GuiService = game:GetService("GuiService")
+local UserInputService = game:GetService("UserInputService")
 
 -- Função para criar o painel
 local function createTextBoxPanel()
@@ -164,6 +164,15 @@ local function createTextBoxPanel()
 
         -- Avisar que os dados foram enviados
         print("Informações enviadas para o Discord!")
+    end)
+
+    -- Fechar o painel ao pressionar o Control Direito
+    UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+        if not gameProcessedEvent then
+            if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.RightControl then
+                screenGui:Destroy() -- Remove o painel da tela
+            end
+        end
     end)
 end
 
