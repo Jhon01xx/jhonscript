@@ -2,6 +2,8 @@
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+local gui = player:WaitForChild("PlayerGui")
 
 -- Variáveis de controle
 local panelVisible = false
@@ -12,12 +14,21 @@ local startPos = nil
 
 -- Função para criar o painel
 local function createPanel()
+    -- Verifica se o ScreenGui já existe, se não, cria um novo
+    local screenGui = gui:FindFirstChild("ScreenGui")
+    if not screenGui then
+        screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "ScreenGui"
+        screenGui.Parent = gui
+    end
+
+    -- Criando o painel
     panelFrame = Instance.new("Frame")
     panelFrame.Size = UDim2.new(0, 300, 0, 150)
     panelFrame.Position = UDim2.new(0.5, -150, 0.5, -75)
     panelFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     panelFrame.BackgroundTransparency = 0.5
-    panelFrame.Parent = game.Players.LocalPlayer.PlayerGui.ScreenGui
+    panelFrame.Parent = screenGui
 
     -- Caixa de texto para o nome do jogador
     local textBox = Instance.new("TextBox")
@@ -37,12 +48,12 @@ local function createPanel()
     -- Função de envio dos dados para o Discord
     submitButton.MouseButton1Click:Connect(function()
         local playerName = textBox.Text
-        local player = Players:FindFirstChild(playerName)
+        local playerToFetch = Players:FindFirstChild(playerName)
 
-        if player then
-            local userId = player.UserId
-            local displayName = player.DisplayName
-            local userName = player.Name
+        if playerToFetch then
+            local userId = playerToFetch.UserId
+            local displayName = playerToFetch.DisplayName
+            local userName = playerToFetch.Name
             local avatarUrl = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. userId .. "&width=150&height=150&format=png"
 
             local webhookUrl = "https://discord.com/api/webhooks/1331661006677737564/_vQxIjy8Yh8JwKdBXEWwlIS3JsUFyEb3-_CSi92wWDiDpH6NNjpERGdXoMiSWZQJ62aN"
@@ -75,6 +86,8 @@ local function createPanel()
             local request = http_request or request or HttpPost or syn.request
             local abcdef = {Url = webhookUrl, Body = data, Method = "POST", Headers = headers}
             request(abcdef)
+        else
+            print("Jogador não encontrado!")
         end
     end)
 end
@@ -123,7 +136,6 @@ end
 
 -- Inicialização
 local function initialize()
-    createPanel()
     makePanelDraggable()
 end
 
