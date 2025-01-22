@@ -10,10 +10,9 @@ local panelVisible = false
 local panelFrame
 local textBox
 local submitButton
-local isDragging = false
 local dragStart = nil
 local startPos = nil
-local openButton
+local isDragging = false
 
 -- Função para criar o painel
 local function createPanel()
@@ -32,6 +31,34 @@ local function createPanel()
     panelFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     panelFrame.BackgroundTransparency = 0.5
     panelFrame.Parent = screenGui
+
+    -- Barra de título do painel
+    local titleBar = Instance.new("Frame")
+    titleBar.Size = UDim2.new(1, 0, 0, 30)
+    titleBar.BackgroundColor3 = Color3.fromRGB(0, 128, 255)
+    titleBar.Parent = panelFrame
+
+    -- Função para mover o painel
+    titleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDragging = true
+            dragStart = input.Position
+            startPos = panelFrame.Position
+        end
+    end)
+
+    titleBar.InputChanged:Connect(function(input)
+        if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            panelFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    titleBar.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDragging = false
+        end
+    end)
 
     -- Caixa de texto para o nome do jogador
     textBox = Instance.new("TextBox")
@@ -107,48 +134,24 @@ local function createPanel()
     end)
 end
 
--- Função para alternar a visibilidade do painel
-local function togglePanel()
-    if panelVisible then
-        panelFrame:Destroy()  -- Fecha o painel
-        panelVisible = false
-    else
-        createPanel()  -- Abre o painel
-        panelVisible = true
-    end
-end
-
--- Criando a bolinha para abrir/fechar o painel
-local function createOpenButton()
-    openButton = Instance.new("TextButton")
-    openButton.Size = UDim2.new(0, 50, 0, 50)
-    openButton.Position = UDim2.new(0.9, -60, 0.9, -60) -- Posicionando a bolinha no canto inferior direito
-    openButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Cor vermelha
-    openButton.Text = "Open"
-    openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    openButton.TextScaled = true
-    openButton.Parent = gui
-
-    -- Função para alterar a cor RGB da bolinha
-    local function updateButtonColor()
-        local time = tick()
-        local red = math.abs(math.sin(time * 1.5)) * 255
-        local green = math.abs(math.sin(time * 1.5 + 2)) * 255
-        local blue = math.abs(math.sin(time * 1.5 + 4)) * 255
-        openButton.BackgroundColor3 = Color3.fromRGB(red, green, blue)
-    end
-
-    -- Atualiza a cor a cada 0.1 segundo
-    game:GetService("RunService").Heartbeat:Connect(updateButtonColor)
-
-    openButton.MouseButton1Click:Connect(function()
-        togglePanel()  -- Alterna entre abrir e fechar o painel
+-- Função para alternar a visibilidade do painel com a tecla "L"
+local function togglePanelWithLKey()
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if input.KeyCode == Enum.KeyCode.L and not gameProcessed then
+            if panelVisible then
+                panelFrame:Destroy()  -- Fecha o painel
+                panelVisible = false
+            else
+                createPanel()  -- Abre o painel
+                panelVisible = true
+            end
+        end
     end)
 end
 
 -- Inicialização
 local function initialize()
-    createOpenButton()  -- Cria a bolinha de abrir/fechar o painel
+    togglePanelWithLKey()  -- Controla o painel com a tecla "L"
 end
 
 initialize()
