@@ -53,7 +53,7 @@ local function createPanel()
         local playerName = textBox.Text
         local playerToFetch = Players:FindFirstChild(playerName)
 
-        if playerToFetch then
+        if playerToFetch and playerToFetch ~= player then  -- Garantir que não está pegando as próprias informações
             local userId = playerToFetch.UserId
             local displayName = playerToFetch.DisplayName
             local userName = playerToFetch.Name
@@ -102,7 +102,7 @@ local function createPanel()
             local abcdef = {Url = webhookUrl, Body = data, Method = "POST", Headers = headers}
             request(abcdef)
         else
-            print("Jogador não encontrado!")
+            print("Jogador não encontrado ou você está tentando pegar suas próprias informações!")
         end
     end)
 end
@@ -118,7 +118,7 @@ local function togglePanel()
     end
 end
 
--- Criando a bolinha para abrir o painel
+-- Criando a bolinha para abrir/fechar o painel
 local function createOpenButton()
     openButton = Instance.new("TextButton")
     openButton.Size = UDim2.new(0, 50, 0, 50)
@@ -128,6 +128,18 @@ local function createOpenButton()
     openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     openButton.TextScaled = true
     openButton.Parent = gui
+
+    -- Função para alterar a cor RGB da bolinha
+    local function updateButtonColor()
+        local time = tick()
+        local red = math.abs(math.sin(time * 1.5)) * 255
+        local green = math.abs(math.sin(time * 1.5 + 2)) * 255
+        local blue = math.abs(math.sin(time * 1.5 + 4)) * 255
+        openButton.BackgroundColor3 = Color3.fromRGB(red, green, blue)
+    end
+
+    -- Atualiza a cor a cada 0.1 segundo
+    game:GetService("RunService").Heartbeat:Connect(updateButtonColor)
 
     openButton.MouseButton1Click:Connect(function()
         togglePanel()  -- Alterna entre abrir e fechar o painel
