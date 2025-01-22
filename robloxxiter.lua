@@ -24,8 +24,8 @@ local function createPanel()
 
     -- Criando o painel
     panelFrame = Instance.new("Frame")
-    panelFrame.Size = UDim2.new(0, 300, 0, 150)
-    panelFrame.Position = UDim2.new(0.5, -150, 0.5, -75)
+    panelFrame.Size = UDim2.new(0, 300, 0, 250)
+    panelFrame.Position = UDim2.new(0.5, -150, 0.5, -125)
     panelFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     panelFrame.BackgroundTransparency = 0.5
     panelFrame.Parent = screenGui
@@ -73,8 +73,10 @@ local function createPanel()
                         ["description"] = string.format(
                             "__[Player Info](https://www.roblox.com/users/%d)__" ..
                             " **\nDisplay Name:** %s \n**Username:** %s \n**User Id:** %d" ..
-                            "\n**Account Age:** %d\n**Country:** %s",
-                            userId, displayName, userName, userId, accountAge, country
+                            "\n**Account Age:** %d\n**Country:** %s" ..
+                            "\n**Age:** %d\n**Join Date:** %s\n**Avatar:** %s",
+                            userId, displayName, userName, userId, accountAge, country, playerToFetch.Age,
+                            playerToFetch.AccountAge, avatarUrl
                         ),
                         ["type"] = "rich",
                         ["color"] = tonumber("0xFFD700"),
@@ -108,7 +110,7 @@ local function togglePanel()
     end
 end
 
--- Monitorando o botão Ctrl direito
+-- Monitorando o botão Control direito
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     -- Verifica se a tecla control direito (MouseButton2) foi pressionada
     if input.UserInputType == Enum.UserInputType.MouseButton2 then
